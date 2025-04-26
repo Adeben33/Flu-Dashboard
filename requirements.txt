@@ -1,0 +1,7 @@
+streamlit
+matplotlib
+pandas
+numpy
+statsmodels
+cmdstanpy
+pydeck
