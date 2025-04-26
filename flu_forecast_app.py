@@ -10,32 +10,17 @@ import streamlit as st
 import pydeck as pdk
 import streamlit as st
 import pydeck as pdk
-from cmdstanpy import CmdStanModel, cmdstan_path, install_cmdstan
+from cmdstanpy import CmdStanModel
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
 st.set_page_config(layout="wide")
 st.title("🦠 Influenza in Canada")
 
-def check_gpp():
-    try:
-        output = subprocess.check_output(["g++", "--version"], text=True)
-        st.text(f"g++ available:\n{output}")
-    except Exception as e:
-        st.error(f"g++ NOT available. Error: {e}")
-
-check_gpp()
-
 @st.cache_resource
 def load_seirv_model():
-    # Install CmdStan if missing
-    if cmdstan_path() is None or not os.path.exists(cmdstan_path()):
-        install_cmdstan()
-    # Compile and load Stan model
-    return CmdStanModel(stan_file="seirv_model.stan")
+    return CmdStanModel(exe_file="./seirv_model")
 
-
-# --- Pre-compile SEIRV Stan model once ---
 seirv_model = load_seirv_model()
 
 # --- Correct caching of SEIRV sampling ---
