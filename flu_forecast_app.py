@@ -14,6 +14,10 @@ from cmdstanpy import CmdStanModel
 from pandas.plotting import register_matplotlib_converters
 register_matplotlib_converters()
 
+from cmdstanpy import CmdStanModel
+
+model = CmdStanModel(stan_file='seirv_model.stan')
+
 st.set_page_config(layout="wide")
 st.title("🦠 Influenza in Canada")
 
@@ -248,7 +252,7 @@ if uploaded_file:
         ax_seirv.set_xticklabels(weeks[::2], rotation=45, ha='right')
         ax_seirv.set_xlabel('Surveillance Week', fontsize=16)
         ax_seirv.set_ylabel("Number of Cases", fontsize=14)
-        ax_seirv.tick_params(axis='both', labelsize=14)
+        ax_seirv.tick_params(axis='both', labelsize=12)
         ax_seirv.set_title('Observed vs Predicted Influenza Incidence (SEIRV Model)', fontsize=18)
         ax_seirv.legend()
         ax_seirv.grid(False)
