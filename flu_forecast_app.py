@@ -17,11 +17,8 @@ register_matplotlib_converters()
 st.set_page_config(layout="wide")
 st.title("🦠 Influenza in Canada")
 
-@st.cache_resource
-def load_seirv_model():
-    return CmdStanModel(exe_file="./seirv_model")
-
-seirv_model = load_seirv_model()
+# --- Pre-compile SEIRV Stan model once ---
+seirv_model = CmdStanModel(stan_file="seirv_model.stan")
 
 # --- Correct caching of SEIRV sampling ---
 @st.cache_resource
@@ -31,9 +28,9 @@ def run_seirv_sampling(_model, stan_data):
 
 # Sidebar controls
 st.sidebar.header("Filter")
-# date_range = st.sidebar.date_input("Select Date Range")
-# region = st.sidebar.selectbox("Region", ["Canada (National)", "Ontario", "Quebec", "BC", "Alberta"])
-# n_weeks = st.sidebar.slider("Weeks to Forecast", min_value=4, max_value=52, value=26)
+date_range = st.sidebar.date_input("Select Date Range")
+region = st.sidebar.selectbox("Region", ["Canada (National)", "Ontario", "Quebec", "BC", "Alberta"])
+n_weeks = st.sidebar.slider("Weeks to Forecast", min_value=4, max_value=52, value=26)
 season = st.sidebar.selectbox("Season", ["2023-2024", "2024-2025"])
 
 # File upload
@@ -121,7 +118,7 @@ if uploaded_file:
         ax_box.grid(False)
         st.pyplot(fig2)
 
-    st.markdown("### Influenza Total Cases Forecasting")
+    st.markdown("### Influenza Total Forecasting")
 
     # --- Prepare for modeling ---
     df['Date'] = pd.to_datetime(df['Year'].astype(str) + '-W' + df['Surveilaince Week'].astype(str) + '-6', format='%G-W%V-%u')
@@ -186,8 +183,25 @@ if uploaded_file:
     sarima_result = sarima_model.fit(disp=False)
     fitted_sarima = sarima_result.fittedvalues
 
+    # --- Plot ---
+    fig_total, ax_total = plt.subplots(figsize=(16, 9))
+    ax_total.plot(df_weekly.index, df_weekly, label='Actual Cases', color='black', marker='o')
+    ax_total.plot(df_fourier.index, df_fourier['Fitted'], label='Fourier Fit', color='red')
+    ax_total.fill_between(df_fourier.index, df_fourier['Lower'], df_fourier['Upper'], color='red', alpha=0.2, label='95% CI (Fourier Fit)')
+    ax_total.plot(df_weekly.index, stl_fitted, label='STL (log) Trend + Seasonality', color='green')
+    ax_total.plot(df_weekly.index, fitted_sarima, label='SARIMA Fit', color='blue', linestyle='--')
+    ax_total.set_xticks(df.index[::2])
+    ax_total.set_xticklabels(df['Surveilaince Week'].iloc[::2], rotation=45, ha='right', fontsize=10)
+    ax_total.set_title('Flu Case Fitting with Fourier, STL, and SARIMA', fontsize=18)
+    ax_total.set_xlabel('Surveillance Week', fontsize=14)
+    ax_total.set_ylabel('Cases', fontsize=14)
+    ax_total.legend()
+    ax_total.grid(True)
+    plt.tight_layout()
+    st.pyplot(fig_total)
 
 # --- SEIRV Forecast ---
+    st.markdown("### Influenza Forecasting with SEIRV Model (Bayesian)")
 
     observed = df['Influenza Total'].values
     dates = df.index
@@ -212,46 +226,19 @@ if uploaded_file:
     ci95_low = np.percentile(pred_cases, 2.5, axis=0)
     ci95_high = np.percentile(pred_cases, 97.5, axis=0)
 
-
-# --- Two columns: Total Forecasting and SEIRV Forecasting ---
-col_total_forecast, col_seirv_forecast = st.columns(2)
-
-with col_total_forecast:
-    st.markdown("### 📈 Statistical Forecasting (Fourier / STL / SARIMA)")
-    fig_total, ax_total = plt.subplots(figsize=(12, 6))
-    ax_total.plot(df_weekly.index, df_weekly, label='Actual Cases', color='black', marker='o')
-    ax_total.plot(df_fourier.index, df_fourier['Fitted'], label='Fourier Fit', color='red')
-    ax_total.fill_between(df_fourier.index, df_fourier['Lower'], df_fourier['Upper'], color='red', alpha=0.2)
-    ax_total.plot(df_weekly.index, stl_fitted, label='STL (log) Trend + Seasonality', color='green')
-    ax_total.plot(df_weekly.index, fitted_sarima, label='SARIMA Fit', color='blue', linestyle='--')
-    ax_total.set_xticks(df.index[::2])
-    ax_total.tick_params(axis='both', labelsize=14)
-    ax_total.set_xticklabels(df['Surveilaince Week'].iloc[::2], rotation=45, ha='right')
-    ax_total.set_xlabel('Surveillance Week', fontsize=14)
-    ax_total.set_ylabel('Cases', fontsize=14)
-    ax_total.set_title('Flu Case Fitting with Fourier, STL, and SARIMA', fontsize=16)
-    ax_total.legend()
-    ax_total.grid(False)
+    fig4, ax4 = plt.subplots(figsize=(18, 9))
+    ax4.fill_between(np.arange(len(dates)), ci95_low, ci95_high, color='lightblue', alpha=0.3)
+    ax4.plot(np.arange(len(dates)), median_pred, label="Predicted Median (SEIRV)", color='blue')
+    ax4.scatter(np.arange(len(dates)), observed, label="Observed", color='black')
+    
+    # Set x-ticks evenly spaced with Surveillance Week labels
+    ax4.set_xticks(np.arange(0, len(dates), 2))  # Show every 2nd week to avoid crowding
+    ax4.set_xticklabels(weeks[::2], rotation=45, ha='right')
+    
+    ax4.set_xlabel("Surveillance Week", fontsize=16)
+    ax4.set_ylabel("Cases", fontsize=16)
+    ax4.set_title("Observed vs Predicted Influenza Incidence (SEIRV Model)", fontsize=18)
+    ax4.legend()
+    ax4.grid(True)
     plt.tight_layout()
-    st.pyplot(fig_total)
-
-with col_seirv_forecast:
-    st.markdown("### 🧪 SEIRV Bayesian Forecast (Stan Model)")
-    fig_seirv, ax_seirv = plt.subplots(figsize=(12, 6))
-    ax_seirv.fill_between(np.arange(len(dates)), ci95_low, ci95_high, color='lightblue', alpha=0.3)
-    ax_seirv.plot(np.arange(len(dates)), median_pred, label="Predicted Median (SEIRV)", color='blue')
-    ax_seirv.scatter(np.arange(len(dates)), observed, label="Observed", color='black', s=40)
-    ax_seirv.set_xticks(np.arange(0, len(dates), 2))
-    ax_seirv.set_xticklabels(weeks[::2], rotation=45, ha='right')
-    ax_seirv.set_xlabel('Surveillance Week', fontsize=14)
-    ax_seirv.tick_params(axis='both', labelsize=14)
-    ax_seirv.set_ylabel('Cases', fontsize=14)
-    ax_seirv.set_title('Observed vs Predicted Influenza Incidence (SEIRV Model)', fontsize=16)
-    ax_seirv.legend()
-    ax_seirv.grid(False)
-    plt.tight_layout()
-    st.pyplot(fig_seirv)
-
-
-
-
+    st.pyplot(fig4)
