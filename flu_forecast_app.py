@@ -42,6 +42,16 @@ def prepare_stan_data(observed):
 
 seirv_model = load_seirv_model()
 
+@st.cache_data
+def run_seirv_and_extract(_model, stan_data):
+    fit = _model.sample(data=stan_data, chains=4, iter_sampling=1000, iter_warmup=500, seed=123)
+    pred_cases = fit.stan_variable("pred_cases")
+    median_pred = np.median(pred_cases, axis=0)
+    ci95_low = np.percentile(pred_cases, 2.5, axis=0)
+    ci95_high = np.percentile(pred_cases, 97.5, axis=0)
+    return median_pred, ci95_low, ci95_high
+
+
 
 # Sidebar controls
 st.sidebar.header("Filter")
@@ -204,13 +214,8 @@ if uploaded_file:
     
     stan_data = prepare_stan_data(observed)
 
-    with st.spinner("Running SEIRV model sampling (only once)..."):
-        fit = run_seirv_sampling(seirv_model, stan_data)
-
-    pred_cases = fit.stan_variable("pred_cases")
-    median_pred = np.median(pred_cases, axis=0)
-    ci95_low = np.percentile(pred_cases, 2.5, axis=0)
-    ci95_high = np.percentile(pred_cases, 97.5, axis=0)
+    with st.spinner("Running SEIRV model sampling (cached)..."):
+        median_pred, ci95_low, ci95_high = run_seirv_and_extract(seirv_model, stan_data)
 
     col3, col4 = st.columns(2)
 
@@ -249,4 +254,3 @@ if uploaded_file:
         ax_seirv.grid(False)
         plt.tight_layout()
         st.pyplot(fig_seirv)
-
