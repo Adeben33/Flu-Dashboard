@@ -206,18 +206,7 @@ sarima_model = SARIMAX(df_weekly, order=(1, 1, 1), seasonal_order=(1, 1, 1, 52))
 sarima_result = sarima_model.fit(disp=False)
 fitted_sarima = sarima_result.fittedvalues
 
-
-observed = df['Influenza Total'].values
-dates = df.index
-weeks = df['Surveilaince Week'].values
-
-stan_data = prepare_stan_data(observed)
-
-with st.spinner("Running SEIRV model sampling (cached)..."):
-    median_pred, ci95_low, ci95_high = run_seirv_and_extract(seirv_model, stan_data)
-
 col3, col4 = st.columns(2)
-
 with col3:
     st.markdown("### Statistical Forecasting")
     fig_total, ax_total = plt.subplots(figsize=(12, 6))
@@ -236,6 +225,18 @@ with col3:
     ax_total.grid(False)
     plt.tight_layout()
     st.pyplot(fig_total)
+
+observed = df['Influenza Total'].values
+dates = df.index
+weeks = df['Surveilaince Week'].values
+
+stan_data = prepare_stan_data(observed)
+
+with st.spinner("Running SEIRV model sampling (cached)..."):
+    median_pred, ci95_low, ci95_high = run_seirv_and_extract(seirv_model, stan_data)
+
+
+
 
 with col4:
     st.markdown("### Forecasting with SEIRV Model")
