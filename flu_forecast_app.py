@@ -17,6 +17,15 @@ register_matplotlib_converters()
 st.set_page_config(layout="wide")
 st.title("🦠 Influenza in Canada")
 
+def check_gpp():
+    try:
+        output = subprocess.check_output(["g++", "--version"], text=True)
+        st.text(f"g++ available:\n{output}")
+    except Exception as e:
+        st.error(f"g++ NOT available. Error: {e}")
+
+check_gpp()
+
 @st.cache_resource
 def load_seirv_model():
     # Install CmdStan if missing
