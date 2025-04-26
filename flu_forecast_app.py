@@ -17,9 +17,6 @@ register_matplotlib_converters()
 st.set_page_config(layout="wide")
 st.title("🦠 Influenza in Canada")
 
-# --- Pre-compile SEIRV Stan model once ---
-seirv_model = CmdStanModel(stan_file="seirv_model.stan")
-
 @st.cache_resource
 def load_seirv_model():
     return CmdStanModel(exe_file="./seirv_model")
@@ -136,8 +133,7 @@ if uploaded_file:
         ax_box.grid(False)
         st.pyplot(fig2)
 
-    st.markdown("### Influenza Total Forecasting")
-
+   
     # --- Prepare for modeling ---
     df['Date'] = pd.to_datetime(df['Year'].astype(str) + '-W' + df['Surveilaince Week'].astype(str) + '-6', format='%G-W%V-%u')
     df.set_index('Date', inplace=True)
@@ -219,7 +215,7 @@ if uploaded_file:
     col3, col4 = st.columns(2)
 
     with col3:
-        st.markdown("### Influenza Total Forecasting")
+        st.markdown("### Statistical Forecasting")
         fig_total, ax_total = plt.subplots(figsize=(12, 6))
         ax_total.plot(df_weekly.index, df_weekly, label='Actual Cases', color='black', marker='o')
         ax_total.plot(df_fourier.index, df_fourier['Fitted'], label='Fourier Fit', color='red')
@@ -238,7 +234,7 @@ if uploaded_file:
         st.pyplot(fig_total)
 
     with col4:
-        st.markdown("### Influenza Forecasting with SEIRV Model (Bayesian)")
+        st.markdown("### Forecasting with SEIRV Model")
         fig_seirv, ax_seirv = plt.subplots(figsize=(12, 6))
         ax_seirv.fill_between(np.arange(len(dates)), ci95_low, ci95_high, color='lightblue', alpha=0.3)
         ax_seirv.plot(np.arange(len(dates)), median_pred, label="Predicted Median (SEIRV)", color='blue')
