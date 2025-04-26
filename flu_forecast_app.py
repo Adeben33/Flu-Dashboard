@@ -24,7 +24,7 @@ def load_seirv_model():
 # --- Correct caching of SEIRV sampling ---
 @st.cache_resource
 def run_seirv_sampling(_model, stan_data):
-    return _model.sample(data=stan_data, chains=4, iter_sampling=1000, iter_warmup=500, seed=123)
+    return _model.sample(data=stan_data, chains=1, iter_sampling=1000, iter_warmup=500, seed=123,show_console=True)
 
 @st.cache_data
 def prepare_stan_data(observed):
