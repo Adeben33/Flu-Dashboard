@@ -27,7 +27,7 @@ def load_seirv_model():
 
 
 # --- Pre-compile SEIRV Stan model once ---
-seirv_model = CmdStanModel(stan_file="seirv_model.stan")
+seirv_model = load_seirv_model(stan_file="seirv_model.stan")
 
 # --- Correct caching of SEIRV sampling ---
 @st.cache_resource
